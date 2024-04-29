@@ -196,3 +196,11 @@ temp
 
 # test file
 test.py
+
+# osworld
+/examples/osworld/logs/*
+/examples/osworld/cache/*
+/examples/osworld/results/*
+/examples/osworld/tmp/*
+
+

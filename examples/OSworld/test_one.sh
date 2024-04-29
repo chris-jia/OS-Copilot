@@ -1,0 +1,1 @@
+python run_one.py --path_to_vm Ubuntu/Ubuntu.vmx  --observation_type screenshot_a11y_tree --model gpt-4-turbo --result_dir ./results --max_trajectory_length 2 --domain chrome --example_id e1e75309-3ddb-4d09-92ec-de869c928143
