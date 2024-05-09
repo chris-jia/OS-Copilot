@@ -65,8 +65,7 @@ class OSworldAgent(BaseAgent):
         """
 
         messages = self._get_message(task,obs)
-
-        print("Generating content with GPT model: %s", self.model)
+        print("Generating content with GPT model:")
         response = self.llm.chat(messages)
 
         print("RESPONSE: %s", response)
@@ -117,6 +116,7 @@ class OSworldAgent(BaseAgent):
 
     def _get_message(self, task, obs):
         system_message = self.system_message + "\nYou are asked to complete the following task: {}".format(task)
+
         messages = []
         messages.append({
             "role": "system",

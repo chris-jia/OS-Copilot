@@ -135,7 +135,7 @@ def main():
     # message.append({"role": "user", "content": 'hello'})
     # print(OPENAI_API_KEY)
     # print(BASE_URL)
-    llm = LLAMA()
+    llm = OpenAI()
     response = llm.chat(messages)
     print(response)
     end_time = time.time()
