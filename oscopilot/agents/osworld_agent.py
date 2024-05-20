@@ -63,23 +63,10 @@ class OSworldAgent(BaseAgent):
 
         No explicit return value, but the method controls the flow of task execution and may exit the process in case of irreparable failures.
         """
-<<<<<<< HEAD
 
         messages = self._get_message(task,obs)
         print("Generating content with GPT model:")
-=======
-        messages = self._get_message(task,obs)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-        print("Generating content with GPT model:")
-=======
-        print("Generating content with GPT model: %s", self.model)
->>>>>>> parent of cf986b5 (add osworld)
-=======
-        print("Generating content with GPT model: %s", self.model)
->>>>>>> parent of cf986b5 (add osworld)
->>>>>>> 94c1716 (Reinitial commit)
         response = self.llm.chat(messages)
 
         print("RESPONSE: %s", response)
@@ -91,10 +78,6 @@ class OSworldAgent(BaseAgent):
             print("Failed to parse action from response", e)
             actions = None
             self.thoughts.append("")
-<<<<<<< HEAD
-
-=======
->>>>>>> 94c1716 (Reinitial commit)
         return response,actions 
 
 
@@ -133,10 +116,6 @@ class OSworldAgent(BaseAgent):
 
     def _get_message(self, task, obs):
         system_message = self.system_message + "\nYou are asked to complete the following task: {}".format(task)
-<<<<<<< HEAD
-
-=======
->>>>>>> 94c1716 (Reinitial commit)
         messages = []
         messages.append({
             "role": "system",
@@ -166,10 +145,6 @@ class OSworldAgent(BaseAgent):
             _thoughts = self.thoughts
 
         for previous_obs, previous_action, previous_thought in zip(_observations, _actions, _thoughts):
-<<<<<<< HEAD
-
-=======
->>>>>>> 94c1716 (Reinitial commit)
             # {{{1
             if self.observation_type == "screenshot_a11y_tree":
                 _screenshot = previous_obs["screenshot"]

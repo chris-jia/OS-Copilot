@@ -123,16 +123,16 @@ if __name__ == '__main__':
         )
 
 
-    example_path = 'D:\jcy\OSWorld-main\evaluation_examples'
+    example_path = 'D:\jcy\OSWorld\evaluation_examples'
 
-    domain = 'multi_apps'
-    example_id = '3161d64e-3120-47b4-aaad-6a764a92493b'
+    domain = 'os'
+    example_id = 'b6781586-6346-41cd-935a-a6b1487918fc'
     config_file = os.path.join(example_path, f"examples/{domain}/{example_id}.json")
     with open(config_file, "r", encoding="utf-8") as f:
         example = json.load(f)
     task_name = example['instruction']
     print('task_name:',task_name)
-    example = replace_path(example, 'evaluation_examples/settings', 'D:\jcy\OSWorld-main\evaluation_examples\settings')
+    example = replace_path(example, 'evaluation_examples/settings', 'D:\jcy\OSWorld\evaluation_examples\settings')
     
     previous_obs = environment.reset(task_config=example)
 
@@ -162,6 +162,7 @@ if __name__ == '__main__':
     elif 'GUI' in info:
         gui_agent.run()
     # 判定内容
+    print("evaluate.......")
     print(environment.evaluate())
 
 
