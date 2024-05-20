@@ -37,6 +37,7 @@ def extract_code(input_string):
                 language = "Python"
             elif re.search("bash", code.lower()) or re.search(r"echo", code):
                 language = "Bash"
+<<<<<<< HEAD
 
         code = "pyautogui.typewrite({0}, interval=0.05);pyautogui.press('enter');time.sleep(2)".format(code)
 
@@ -44,6 +45,16 @@ def extract_code(input_string):
             code += ";pyautogui.typewrite('password', interval=0.05);pyautogui.press('enter');time.sleep(1);"
 
         return code.strip(), language
+=======
+        code = code.strip()
+        code = code.replace('"', '\\"')
+        code = code.replace('\n', ' && ')
+        code = "pyautogui.typewrite(\"{0}\", interval=0.05)\npyautogui.press('enter')\ntime.sleep(2)".format(code)
+        if re.search("sudo", code.lower()):
+            code += "\npyautogui.typewrite('password', interval=0.05)\npyautogui.press('enter')\ntime.sleep(1)"
+
+        return code, language
+>>>>>>> 94c1716 (Reinitial commit)
     else:
         return None, None
 
@@ -56,7 +67,11 @@ class LightFriday(BaseModule):
         self.environment = DesktopEnv(
             path_to_vm=r"D:/jcy/OSWorld-main/Ubuntu/Ubuntu.vmx",
             action_space="pyautogui",
+<<<<<<< HEAD
             require_a11y_tree=True,
+=======
+            require_a11y_tree=False,
+>>>>>>> 94c1716 (Reinitial commit)
         )
         id_ = example['id']
 
@@ -64,6 +79,7 @@ class LightFriday(BaseModule):
         self.task_name = example['instruction']
         print('Task:\n'+self.task_name)
 
+<<<<<<< HEAD
         
         self.environment.reset(task_config=example)
 
@@ -90,11 +106,38 @@ class LightFriday(BaseModule):
             screenshot = __f.read()
         base64_image = encode_image(screenshot)
 
+=======
+        self.environment.reset(task_config=example)
+
+        self.reply = None
+        while not self.environment.controller.get_terminal_output():
+            self.environment.step("pyautogui.click()")
+            self.environment.step("pyautogui.hotkey('ctrl', 'alt', 't')")
+    
+    def execute_tool(self, code, lang):
+        obs, reward, done, info = self.environment.step(code)  # node_type
+
+        
+        reply = self.environment.controller.get_terminal_output()
+        # update reply
+        if self.reply and reply:
+            message_terminal = reply.replace(self.reply, "")
+        else:
+            message_terminal = reply
+        self.reply = reply
+
+
+        with open(obs['screenshot'], "rb") as __f:
+            screenshot = __f.read()
+        base64_image = encode_image(screenshot)
+        print("message_terminal", message_terminal)
+>>>>>>> 94c1716 (Reinitial commit)
         message = {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
+<<<<<<< HEAD
                         "text": "After executing the command, the screenshot as below."
                     },
                     {
@@ -110,11 +153,29 @@ class LightFriday(BaseModule):
 
     def run(self):
         light_planner_sys_prompt = '''You are Light Friday, a world-class programmer that can complete any goal by executing code.
+=======
+                        "text": "After executing the command, the terminal output is {0}. the screenshot as below.".format(message_terminal)
+                    }
+                    # {
+                    #     "type": "image_url",
+                    #     "image_url": {
+                    #         "url": f"data:image/png;base64,{base64_image}",
+                    #         "detail": "high"
+                    #     }
+                    # }
+                ]
+        }
+        return message
+# When a user refers to a file opened， you can use the provided screenshot to find the filepath.
+    def run(self):
+        light_planner_sys_prompt = '''You are Light Friday, a world-class programmer that can complete any goal by using linux command.
+>>>>>>> 94c1716 (Reinitial commit)
 First, write a plan. **Always recap the plan between each code block** (you have extreme short-term memory loss, so you need to recap the plan between each message block to retain it).
 When you execute code, it will be executed **on the user's machine**. The user has given you **full and complete permission** to execute any code necessary to complete the task. Execute the code.
 If you want to send data between programming languages, save the data to a txt or json.
 You can access the internet. Run **any code** to achieve the goal, and if at first you don't succeed, try again and again.
 You can install new packages.
+<<<<<<< HEAD
 When a user refers to a filename, they're likely referring to an existing file in the directory you're currently executing code in.
 Write messages to the user in Markdown.
 In general, try to **make plans** with as few steps as possible. As for actually executing code to carry out that plan, for *stateful* languages (like python, javascript, shell, but NOT for html which starts from 0 every time) **it's critical not to try to do everything in one code block.** You should try something, print information about it, then continue from there in tiny, informed steps. You will never get it on the first try, and attempting it in one go will often lead to errors you cant see.
@@ -126,6 +187,18 @@ Include a comment in your code blocks to specify the programming language used, 
 print("hello, world")
 ```
 Currently, supported languages include Python and Bash."
+=======
+Important: When a user refers to a file opened or a url, you can use your visual capacity or some command line tools to see the path of the file being opened.
+Write messages to the user in Markdown.
+In general, try to **make plans** with as few steps as possible. As for actually executing code to carry out that plan, for *stateful* languages (like python, javascript, shell, but NOT for html which starts from 0 every time) **it's critical not to try to do everything in one code block.** You should try something, print information about it, then continue from there in tiny, informed steps. You will never get it on the first try, and attempting it in one go will often lead to errors you cant see.
+You are capable of **any** task.
+When installing new software or package, you should first check whether it is already installed.
+You Code should like this, doesnot need comment, only command:
+```bash
+ls *.xlsx
+```
+Currently, supported languages include Bash." The command you're outputing should only be one line
+>>>>>>> 94c1716 (Reinitial commit)
 '''  #  Try to use `print` or `echo` to output information needed for the subsequent tasks, or the next step might not get the required information.
         light_planner_user_prompt = '''
         User's information are as follows:
@@ -137,8 +210,14 @@ Currently, supported languages include Python and Bash."
             {"role": "system", "content": light_planner_sys_prompt},
             {"role": "user", "content": light_planner_user_prompt},
         ]
+<<<<<<< HEAD
 
         while True:
+=======
+ 
+        while True:
+            print("send_chat_prompts...")
+>>>>>>> 94c1716 (Reinitial commit)
             response = send_chat_prompts(message, self.llm)
             rich_print(response)
             message.append({"role": "assistant", "content": response})
@@ -157,6 +236,7 @@ Currently, supported languages include Python and Bash."
             if 'Execution Complete' in response or 'Execution Interrupted' in response:
                 break
 
+<<<<<<< HEAD
 
 if __name__ == '__main__':
     domain = 'os'
@@ -164,6 +244,31 @@ if __name__ == '__main__':
     config_file = os.path.join("D:\jcy\OSWorld-main\evaluation_examples", f"examples/{domain}/{example_id}.json")
     with open(config_file, "r", encoding="utf-8") as f:
         example = json.load(f)
+=======
+def replace_path(obj,old_path,new_path):
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            obj[key] = replace_path(value,old_path,new_path)
+    elif isinstance(obj, list):
+        obj = [replace_path(item,old_path,new_path) for item in obj]
+    elif isinstance(obj, str):
+        obj = obj.replace(old_path, new_path)
+    return obj
+
+if __name__ == '__main__':
+
+    example_path = 'D:\jcy\OSWorld-main\evaluation_examples'
+
+    domain = 'multi_apps'
+    example_id = '58565672-7bfe-48ab-b828-db349231de6b'
+    config_file = os.path.join(example_path, f"examples/{domain}/{example_id}.json")
+    with open(config_file, "r", encoding="utf-8") as f:
+        example = json.load(f)
+
+    example = replace_path(example, 'evaluation_examples/settings', 'D:\jcy\OSWorld-main\evaluation_examples\settings')
+    
+
+>>>>>>> 94c1716 (Reinitial commit)
     args = setup_config()
     # if not args.query:
     #     # args.query = "Copy any text file located in the working_dir/document directory that contains the word 'agent' to a new folder named 'agents' "

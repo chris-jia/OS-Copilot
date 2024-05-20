@@ -1,10 +1,19 @@
 from oscopilot.utils import setup_config, setup_pre_run
 from oscopilot.modules.base_module import BaseModule
 import re
+import os
+import json
+import base64
+import time
 from rich.console import Console
 from rich.markdown import Markdown
 
+from desktop_env.envs.desktop_env import DesktopEnv
+
 console = Console()
+
+def encode_image(image_content):
+    return base64.b64encode(image_content).decode('utf-8')
 
 def rich_print(markdown_text):
     md = Markdown(markdown_text)
@@ -28,91 +37,114 @@ def extract_code(input_string):
                 language = "Python"
             elif re.search("bash", code.lower()) or re.search(r"echo", code):
                 language = "Bash"
+        code = code.strip()
+        code = code.replace('"', '\\"')
+        code = code.replace('\n', ' && ')
+        code = "pyautogui.typewrite(\"{0}\", interval=0.05)\npyautogui.press('enter')\ntime.sleep(2)".format(code)
+        if re.search("sudo", code.lower()):
+            code += "\npyautogui.typewrite('password', interval=0.05)\npyautogui.press('enter')\ntime.sleep(1)"
 
-        return code.strip(), language
+        return code, language
     else:
         return None, None
 
-
-class LightFriday(BaseModule):
-    def __init__(self, args):
+from desktop_env.envs.desktop_env import DesktopEnv
+class CLIAgent(BaseModule):
+    def __init__(self, args, task_name, env):
         super().__init__()
         self.args = args
+
+        self.environment = env
+
+        self.task_name = task_name
+
+        self.reply = None
     
     def execute_tool(self, code, lang):
-        state = self.environment.step(lang, code)  # node_type
-        return_info = ''
-        if state.result != None and state.result.strip() != '':
-            return_info = '**Execution Result** :' + state.result.strip()
-        if state.error != None and state.error.strip() != '':
-            return_info = '\n**Execution Error** :' + state.error.strip()
-        return return_info.strip()
+        obs, reward, done, info = self.environment.step(code)  # node_type
 
-    def run(self, task):
-        light_planner_sys_prompt = '''You are Light Friday, a world-class programmer that can complete any goal by executing code.
+        
+        reply = self.environment.controller.get_terminal_output()
+        # update reply
+        if self.reply and reply:
+            message_terminal = reply.replace(self.reply, "")
+        else:
+            message_terminal = reply
+        self.reply = reply
+
+        base64_image = encode_image(obs['screenshot'])
+        print("message_terminal", message_terminal)
+        message = {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "After executing the command, the terminal output is {0}. the screenshot as below.".format(message_terminal)
+                    }
+                    # {
+                    #     "type": "image_url",
+                    #     "image_url": {
+                    #         "url": f"data:image/png;base64,{base64_image}",
+                    #         "detail": "high"
+                    #     }
+                    # }
+                ]
+        }
+        return message
+# When a user refers to a file opened， you can use the provided screenshot to find the filepath.
+    def run(self,task_description):
+
+        while not self.environment.controller.get_terminal_output():
+            self.environment.step("pyautogui.click()")
+            self.environment.step("pyautogui.hotkey('ctrl', 'alt', 't')")
+
+        light_planner_sys_prompt = '''You are Light Friday, a world-class programmer that can complete any goal by using linux command.
 First, write a plan. **Always recap the plan between each code block** (you have extreme short-term memory loss, so you need to recap the plan between each message block to retain it).
 When you execute code, it will be executed **on the user's machine**. The user has given you **full and complete permission** to execute any code necessary to complete the task. Execute the code.
 If you want to send data between programming languages, save the data to a txt or json.
 You can access the internet. Run **any code** to achieve the goal, and if at first you don't succeed, try again and again.
 You can install new packages.
-When a user refers to a filename, they're likely referring to an existing file in the directory you're currently executing code in.
+Important: When a user refers to a file opened or a url, you can use your visual capacity or some command line tools to see the path of the file being opened.
 Write messages to the user in Markdown.
 In general, try to **make plans** with as few steps as possible. As for actually executing code to carry out that plan, for *stateful* languages (like python, javascript, shell, but NOT for html which starts from 0 every time) **it's critical not to try to do everything in one code block.** You should try something, print information about it, then continue from there in tiny, informed steps. You will never get it on the first try, and attempting it in one go will often lead to errors you cant see.
 You are capable of **any** task.
-<<<<<<< HEAD
-
-Include a comment in your code blocks to specify the programming language used, like this:
-```python
-# This code is written in Python
-=======
-You Code should like this 
-Include a comment in your code blocks to specify the programming language used, like this:
-```python
->>>>>>> 94c1716 (Reinitial commit)
-print("hello, world")
+When installing new software or package, you should first check whether it is already installed.
+You Code should like this, doesnot need comment, only command:
+```bash
+ls *.xlsx
 ```
-Currently, supported languages include Python and Bash."
+Currently, supported languages include Bash." The command you're outputing should only be one line
 '''  #  Try to use `print` or `echo` to output information needed for the subsequent tasks, or the next step might not get the required information.
         light_planner_user_prompt = '''
         User's information are as follows:
-        System Version: {system_version}
-        Task: {task}
-        Current Working Directiory: {working_dir}'''.format(system_version=self.system_version, task=task, working_dir=self.environment.working_dir)
+        System Version: Ubuntu
+        Task Name: {task_name}
+        Task Description: {task_description}
+        '''.format(task_name=self.task_name,task_description=task_description)
         
         message = [
             {"role": "system", "content": light_planner_sys_prompt},
             {"role": "user", "content": light_planner_user_prompt},
         ]
-
+ 
         while True:
+            print("send_chat_prompts...")
             response = send_chat_prompts(message, self.llm)
             rich_print(response)
-            message.append({"role": "system", "content": response})
+            message.append({"role": "assistant", "content": response})
 
             code, lang = extract_code(response)
             if code:
                 result = self.execute_tool(code, lang)
-                rich_print(result)
             else:
                 result = ''
 
             if result != '':
-                light_exec_user_prompt = 'The result after executing the code: {result}'.format(result=result)
-                message.append({"role": "user", "content": light_exec_user_prompt})
+                message.append(result)
             else:
                 message.append({"role": "user", "content": "Please continue. If all tasks have been completed, reply with 'Execution Complete'. If you believe subsequent tasks cannot continue, reply with 'Execution Interrupted', including the reasons why the tasks cannot proceed, and provide the user with some possible solutions."})
             
             if 'Execution Complete' in response or 'Execution Interrupted' in response:
                 break
 
-
-args = setup_config()
-if not args.query:
-    # args.query = "Copy any text file located in the working_dir/document directory that contains the word 'agent' to a new folder named 'agents' "
-    # args.query = "Copy any text file located in the /home/dingzichen/hcc/OS-Copilot/working_dir directory that contains the word 'agent' to a new folder /home/dingzichen/hcc/OS-Copilot/working_dir/agents"
-    # args.query = "print 'Hello world!'"
-    args.query = "Plot AAPL and META's normalized stock prices"
-task = setup_pre_run(args)
-
-light_friday = LightFriday(args)
-light_friday.run(task)  # list
+        return response

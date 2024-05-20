@@ -135,7 +135,11 @@ def main():
     # message.append({"role": "user", "content": 'hello'})
     # print(OPENAI_API_KEY)
     # print(BASE_URL)
+<<<<<<< HEAD
     llm = OpenAI()
+=======
+    llm = LLAMA()
+>>>>>>> 94c1716 (Reinitial commit)
     response = llm.chat(messages)
     print(response)
     end_time = time.time()

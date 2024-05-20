@@ -527,6 +527,7 @@ Then you will predict the action of the computer based on the image and its elem
 
 You are required to use `pyautogui` to perform the action grounded to the observation, but DONOT use the `pyautogui.locateCenterOnScreen` function to locate the element you want to operate with since we have no image of the element you want to operate with. DONOT USE `pyautogui.screenshot()` to make screenshot.
 Return one line or multiple lines of python code to perform the action each time. When predicting multiple lines of code, make some small sleep like `time.sleep(0.5);` interval so that the machine could take; Each time you need to predict a complete code, no variables or function can be shared from history.
+<<<<<<< HEAD
 You are required to:
 1. Choose between using graphical user interface (GUI) commands or command-line interface (CLI) commands based on simplicity and efficiency. If CLI commands are deemed simpler, open a terminal using the shortcut ctrl+alt+t and execute the necessary commands there.
 2. When graphical user interface (GUI) commands are using, the first thing you need to do is to maximize the application window when the current window is not maximized.
@@ -537,6 +538,26 @@ When there is no direct element counterpart, you should guess the possible eleme
 6. You should not assume the position of an element you cannot see.
 7. Perform only one click at a time, Do not skip steps, please wait for the previous click action to finish.
 
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+You are required to:
+1. The first thing you need to do is to maximize the application window when the current window is not maximized.
+3. You need to determine the specific coordinates of the output based on the image and the name and location in the dictionary, never predict or assume  coordinates yourself.
+=======
+important: The first thing you need to do is to maximize the application window when the current window is not maximized.
+You need to determine the specific coordinates of the output based on the image and the name and location in the dictionary, never predict or assume  coordinates yourself.
+>>>>>>> parent of cf986b5 (add osworld)
+=======
+important: The first thing you need to do is to maximize the application window when the current window is not maximized.
+You need to determine the specific coordinates of the output based on the image and the name and location in the dictionary, never predict or assume  coordinates yourself.
+>>>>>>> parent of cf986b5 (add osworld)
+When there is no direct element counterpart, you should guess the possible elements based on the task and its coordinates.
+Sometimes both shortcuts and clicking can accomplish the same action; in such cases, prioritize using shortcuts.
+Do not make a location estimate, if it does not pop up, please wait.
+You should not assume the position of an element you cannot see.
+Perform only one click at a time, Do not skip steps, please wait for the previous click action to finish.
+>>>>>>> 94c1716 (Reinitial commit)
 You ONLY need to return the code inside a code block, like this:
 ```python
 # your code here

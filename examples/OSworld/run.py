@@ -182,6 +182,11 @@ def test(
             )
             os.makedirs(example_result_dir, exist_ok=True)
             # example start running
+<<<<<<< HEAD
+=======
+            lib_run_single.run_single_example(agent, env, example, max_steps, instruction, args, example_result_dir,
+                                                  scores)
+>>>>>>> 94c1716 (Reinitial commit)
             try:
                 lib_run_single.run_single_example(agent, env, example, max_steps, instruction, args, example_result_dir,
                                                   scores)
@@ -194,6 +199,11 @@ def test(
                         "Error": f"Time limit exceeded in {domain}/{example_id}"
                     }))
                     f.write("\n")
+<<<<<<< HEAD
+=======
+            break
+        break
+>>>>>>> 94c1716 (Reinitial commit)
             # wandb settings
             # os.mkdir(os.path.join(wandb.run.dir, "results/"))
             # for file in os.listdir(example_result_dir):

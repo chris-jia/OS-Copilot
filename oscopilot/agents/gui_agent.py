@@ -12,17 +12,19 @@ from oscopilot.utils.osworld_parse import parse_actions_from_string,parse_code_f
 from oscopilot.utils.llms import OpenAI,LLAMA
 from dotenv import load_dotenv
 
+from oscopilot.utils.parse_obs import parse_obs
+
 load_dotenv(override=True)
 MODEL_TYPE = os.getenv('MODEL_TYPE')
 
-class OSworldAgent(BaseAgent):
+class GUIAgent(BaseAgent):
     """
     A FridayAgent orchestrates the execution of tasks by integrating planning, retrieving, and executing strategies.
     
     This agent is designed to process tasks, manage errors, and refine strategies as necessary to ensure successful task completion. It supports dynamic task planning, information retrieval, execution strategy application, and employs a mechanism for self-refinement in case of execution failures.
     """
 
-    def __init__(self, action_space,observation_type,max_trajectory_length):
+    def __init__(self, args, config, env, action_space,observation_type,max_trajectory_length):
         """
         Initializes the FridayAgent with specified planning, retrieving, and executing strategies, alongside configuration settings.
 
@@ -41,6 +43,12 @@ class OSworldAgent(BaseAgent):
             check_os_version(self.system_version)
         except ValueError as e:
             print(e)        
+        
+        self.environment = env
+        self.task_name = config['instruction']
+
+        domain = config['snapshot']
+        example_id = config['id']
 
         self.action_space= action_space # "pyautogui" # computer_13
         self.observation_type=observation_type # observation_type can be in ["screenshot", "a11y_tree", "screenshot_a11y_tree", "som"]
@@ -48,13 +56,63 @@ class OSworldAgent(BaseAgent):
         self.a11y_tree_max_tokens = 2000
         self.max_trajectory_length = max_trajectory_length
         self.max_steps = 10
+        self.sleep_after_execution = 0.0
+        result_dir = 'D:\jcy\OS-Copilot\\results'
+        self.example_result_dir = os.path.join(
+                result_dir,
+                self.action_space,
+                self.observation_type,
+                domain,
+                example_id
+            )
+
+        os.makedirs(self.example_result_dir, exist_ok=True)
 
         if MODEL_TYPE == "OpenAI":
             self.llm = OpenAI()
         elif MODEL_TYPE == "LLAMA":
             self.llm = LLAMA()
 
-    def run(self, task, obs):
+        self.reset()
+
+    def run(self):
+        step_idx = 0
+        obs, reward, done, info = self.environment.step("")
+        self.environment.controller.start_recording()
+        # str_table = wandb.Table(columns=["Screenshot", "A11T", "Modle Response", "Action", "Action timestamp", "Done"])
+
+        while not done and step_idx < self.max_steps:
+            obs = parse_obs(obs, self.observation_type)
+            response, actions = self.predict(obs)
+            for action in actions:
+                import datetime
+                # Capture the timestamp before executing the action
+                action_timestamp = datetime.datetime.now().strftime("%Y%m%d@%H%M%S")
+                obs, reward, done, info = self.environment.step(action, self.sleep_after_execution)
+                print("Done: %s", done)
+                # Save screenshot and trajectory information
+                with open(os.path.join(self.example_result_dir, f"step_{step_idx + 1}_{action_timestamp}.png"),
+                        "wb") as _f:
+                    _f.write(obs['screenshot'])
+
+                with open(os.path.join(self.example_result_dir, "traj.jsonl"), "a") as f:
+                    f.write(json.dumps({
+                        "step_num": step_idx + 1,
+                        "action_timestamp": action_timestamp,
+                        "action": action,
+                        "reward": reward,
+                        "done": done,
+                        "info": info,
+                        "screenshot_file": f"step_{step_idx + 1}_{action_timestamp}.png"
+                    }))
+                    f.write("\n")
+                if done:
+                    print("The episode is done.")
+                    break
+            step_idx += 1
+        # run.log({"str_trajectory": str_table})
+
+    def predict(self, obs):
         """
         Executes the given task by planning, executing, and refining as needed until the task is completed or fails.
 
@@ -63,24 +121,12 @@ class OSworldAgent(BaseAgent):
 
         No explicit return value, but the method controls the flow of task execution and may exit the process in case of irreparable failures.
         """
-<<<<<<< HEAD
 
-        messages = self._get_message(task,obs)
+        messages = self._get_message(self.task_name, obs)
         print("Generating content with GPT model:")
-=======
-        messages = self._get_message(task,obs)
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-        print("Generating content with GPT model:")
-=======
-        print("Generating content with GPT model: %s", self.model)
->>>>>>> parent of cf986b5 (add osworld)
-=======
-        print("Generating content with GPT model: %s", self.model)
->>>>>>> parent of cf986b5 (add osworld)
->>>>>>> 94c1716 (Reinitial commit)
         response = self.llm.chat(messages)
+
+        
 
         print("RESPONSE: %s", response)
         
@@ -91,10 +137,6 @@ class OSworldAgent(BaseAgent):
             print("Failed to parse action from response", e)
             actions = None
             self.thoughts.append("")
-<<<<<<< HEAD
-
-=======
->>>>>>> 94c1716 (Reinitial commit)
         return response,actions 
 
 
@@ -133,10 +175,7 @@ class OSworldAgent(BaseAgent):
 
     def _get_message(self, task, obs):
         system_message = self.system_message + "\nYou are asked to complete the following task: {}".format(task)
-<<<<<<< HEAD
 
-=======
->>>>>>> 94c1716 (Reinitial commit)
         messages = []
         messages.append({
             "role": "system",
@@ -147,7 +186,6 @@ class OSworldAgent(BaseAgent):
                 },
             ]
         })
-
         assert len(self.observations) == len(self.actions) and len(self.actions) == len(self.thoughts) \
             , "The number of observations and actions should be the same."
 
@@ -166,10 +204,7 @@ class OSworldAgent(BaseAgent):
             _thoughts = self.thoughts
 
         for previous_obs, previous_action, previous_thought in zip(_observations, _actions, _thoughts):
-<<<<<<< HEAD
 
-=======
->>>>>>> 94c1716 (Reinitial commit)
             # {{{1
             if self.observation_type == "screenshot_a11y_tree":
                 _screenshot = previous_obs["screenshot"]

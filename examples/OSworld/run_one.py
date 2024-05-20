@@ -14,10 +14,15 @@ from tqdm import tqdm
 
 import lib_run_single
 from desktop_env.envs.desktop_env import DesktopEnv
+<<<<<<< HEAD
 
 # to update
 from mm_agents.agent import PromptAgent
 
+=======
+# from mm_agents.agent import PromptAgent
+from oscopilot import OSworldAgent
+>>>>>>> 94c1716 (Reinitial commit)
 #  Logger Configs {{{ #
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -52,6 +57,13 @@ logger.addHandler(sdebug_handler)
 
 logger = logging.getLogger("desktopenv.experiment")
 
+<<<<<<< HEAD
+=======
+# wandb config
+### set your wandb api key here
+# os.environ["WANDB_API_KEY"] = "48ec18fb4da7087238c6d6833eab9907565adbf3"
+# wandb.login(key=os.environ.get("WANDB_API_KEY", None))
+>>>>>>> 94c1716 (Reinitial commit)
 
 
 def config() -> argparse.Namespace:
@@ -94,7 +106,11 @@ def config() -> argparse.Namespace:
     parser.add_argument("--stop_token", type=str, default=None)
 
     # example config
+<<<<<<< HEAD
     parser.add_argument("--domain", type=str, default="chrome")
+=======
+    parser.add_argument("--domain", type=str, default="all")
+>>>>>>> 94c1716 (Reinitial commit)
     parser.add_argument("--example_id", type=str, default="bb5e4c0d-f964-439c-97b6-bdb9747de3f4")
     parser.add_argument("--test_all_meta_path", type=str, default="evaluation_examples/test_all.json")
 
@@ -106,7 +122,11 @@ def config() -> argparse.Namespace:
 
 
 def test(
+<<<<<<< HEAD
         args: argparse.Namespace,
+=======
+        args: argparse.Namespace
+>>>>>>> 94c1716 (Reinitial commit)
 ) -> None:
     scores = []
     max_steps = args.max_steps
@@ -133,12 +153,22 @@ def test(
         "result_dir": args.result_dir
     }
 
+<<<<<<< HEAD
     agent = PromptAgent(
         model=args.model,
         max_tokens=args.max_tokens,
         action_space=args.action_space,
         observation_type=args.observation_type,
         max_trajectory_length=args.max_trajectory_length,
+=======
+    # tobe update
+    agent = OSworldAgent(
+        # model=args.model,
+        # max_tokens=args.max_tokens,
+        action_space=args.action_space,
+        observation_type=args.observation_type,
+        max_trajectory_length=args.max_trajectory_length
+>>>>>>> 94c1716 (Reinitial commit)
     )
 
     env = DesktopEnv(
@@ -178,7 +208,11 @@ def test(
     # example start running
     try:
         lib_run_single.run_single_example(agent, env, example, max_steps, instruction, args, example_result_dir,
+<<<<<<< HEAD
                                           scores)
+=======
+                                            scores)
+>>>>>>> 94c1716 (Reinitial commit)
     except Exception as e:
         logger.error(f"Exception in {domain}/{example_id}: {e}")
         # wandb.log({"Exception": wandb.Table(data=[[f"Exception in {domain}/{example_id}: {e}"]], columns=["Error"])})
@@ -188,6 +222,18 @@ def test(
                 "Error": f"Time limit exceeded in {domain}/{example_id}"
             }))
             f.write("\n")
+<<<<<<< HEAD
+=======
+            # wandb settings
+            # os.mkdir(os.path.join(wandb.run.dir, "results/"))
+            # for file in os.listdir(example_result_dir):
+            #     # move file to just under the root dir
+            #     os.rename(os.path.join(example_result_dir, file), os.path.join(wandb.run.dir, f"./results/{file}"))
+            # wandb.finish()
+
+    env.close()
+    logger.info(f"Average score: {sum(scores) / len(scores)}")
+>>>>>>> 94c1716 (Reinitial commit)
 
 
 def get_unfinished(action_space, use_model, observation_type, result_dir, total_file_json):
@@ -262,6 +308,12 @@ if __name__ == '__main__':
 
     if args.domain != "all":
         test_all_meta = {args.domain: test_all_meta[args.domain]}
+<<<<<<< HEAD
     left_info = ""
     logger.info(f"Left tasks:\n{left_info}")
+=======
+
+
+
+>>>>>>> 94c1716 (Reinitial commit)
     test(args)

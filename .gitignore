@@ -202,5 +202,11 @@ test.py
 /examples/osworld/cache/*
 /examples/osworld/results/*
 /examples/osworld/tmp/*
+<<<<<<< HEAD
+=======
+cache/
+tmp/
+results/
+>>>>>>> 94c1716 (Reinitial commit)
 
 
