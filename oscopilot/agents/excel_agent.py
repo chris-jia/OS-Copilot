@@ -34,26 +34,38 @@ def extract_code(input_string):
         # 如果没有语言信息，尝试从代码内容中检测
         if not language:
             if re.search("python", code.lower()) or re.search(r"import\s+\w+", code):
-                language = "Python"
+                language = "python"
             elif re.search("bash", code.lower()) or re.search(r"echo", code):
-                language = "Bash"
-        code = code.strip()
-        code = code.replace('"', '\\"')
-        code = code.replace('\n', ' && ')
-        code = "pyautogui.typewrite(\"{0}\", interval=0.05)\npyautogui.press('enter')\ntime.sleep(2)".format(code)
-        if re.search("sudo", code.lower()):
-            code += "\npyautogui.typewrite('password', interval=0.05)\npyautogui.press('enter')\ntime.sleep(1)"
+                language = "bash"
+
+        if language == 'bash':
+            code = code.strip()
+            code = code.replace('"', '\\"')
+            code = code.replace('\n', ' && ')
+            code = "pyautogui.typewrite(\"{0}\", interval=0.05)\npyautogui.press('enter')\ntime.sleep(2)".format(code)
+            if re.search("sudo", code.lower()):
+                code += "\npyautogui.typewrite('password', interval=0.05)\npyautogui.press('enter')\ntime.sleep(1)"
+        elif language == 'python':
+
+            # save code
+            with open('tmp.py', 'w') as f:
+                f.write(code)
+
+            code = "pyautogui.typewrite(\"python main.py\", interval=0.05)\npyautogui.press('enter')\ntime.sleep(2)"
+            
+        else:
+            raise language
 
         return code, language
     else:
         return None, None
 
 from desktop_env.envs.desktop_env import DesktopEnv
-class CLIAgent(BaseModule):
+class ExcelAgent(BaseModule):
     info = {
-            "name": "CLIAgent",
-            "can do": "excels at completing tasks using Linux command-line commands and can handle any goal that involves script execution, file manipulation, package installation, and internet access.",
-            "can't do": "cann't handle GUI operation, cann't writing python script",
+            "name": "ExcelAgent",
+            "can do": "specializes in creating, analyzing, and modifying Excel spreadsheets using Python's openpyxl library. It can handle tasks involving data entry, formula insertion, chart creation, and spreadsheet formatting. Also capable of detecting open Excel files using Bash commands.",
+            "can't do": "cannot handle GUI operations, cannot perform tasks outside the capabilities of the openpyxl library such as directly interacting with complex macros. Additionally, cannot modify LibreOffice Calc software defaults or preferences."
     }
     def __init__(self, args, task_name, env):
         super().__init__()
@@ -64,10 +76,16 @@ class CLIAgent(BaseModule):
         self.task_name = task_name
 
         self.reply = None
+
     
     def execute_tool(self, code, lang):
+        if lang == 'python':
+            file = [{
+                "local_path": 'tmp.py',
+                "path": '/home/user/main.py'
+              }]
+            self.environment.setup_controller._upload_file_setup(file)
         obs, reward, done, info = self.environment.step(code)  # node_type
-
         
         reply = self.environment.controller.get_terminal_output()
         # update reply
@@ -79,53 +97,76 @@ class CLIAgent(BaseModule):
 
         base64_image = encode_image(obs['screenshot'])
         print("message_terminal", message_terminal)
-        message = {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "After executing the command, the terminal output is {0}. the screenshot as below.".format(message_terminal)
-                    }
-                    # {
-                    #     "type": "image_url",
-                    #     "image_url": {
-                    #         "url": f"data:image/png;base64,{base64_image}",
-                    #         "detail": "high"
-                    #     }
-                    # }
-                ]
-        }
+        if 'gpt' in self.llm.model_name:
+            message = {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "After executing the command, the terminal output is {0}. the screenshot as below.".format(message_terminal)
+                        }
+                        # {
+                        #     "type": "image_url",
+                        #     "image_url": {
+                        #         "url": f"data:image/png;base64,{base64_image}",
+                        #         "detail": "high"
+                        #     }
+                        # }
+                    ]
+            }
+        else:
+            message = {
+                    "role": "user",
+                    "content": "After executing the command, the terminal output is {0}. the screenshot as below.".format(message_terminal)
+            }
         return message
 # When a user refers to a file opened， you can use the provided screenshot to find the filepath.
-    def run(self,task_description):
+    def run(self):
 
         while not self.environment.controller.get_terminal_output():
             self.environment.step("pyautogui.click()")
             self.environment.step("pyautogui.hotkey('ctrl', 'alt', 't')")
 
-        light_planner_sys_prompt = '''You are Light Friday, a world-class programmer that can complete any goal by using linux command.
+        light_planner_sys_prompt = '''You are ExcelAgent, an advanced programming assistant specialized in managing and manipulating Excel files. 
+        Your abilities extend to manipulating slides using Python's openpyxl library.
 First, write a plan. **Always recap the plan between each code block** (you have extreme short-term memory loss, so you need to recap the plan between each message block to retain it).
 When you execute code, it will be executed **on the user's machine**. The user has given you **full and complete permission** to execute any code necessary to complete the task. Execute the code.
 If you want to send data between programming languages, save the data to a txt or json.
 You can access the internet. Run **any code** to achieve the goal, and if at first you don't succeed, try again and again.
 You can install new packages.
-Important: When a user refers to a file opened or a url, you can use your visual capacity or some command line tools to see the path of the file being opened.
+Important: When a user refers to a file opened or a url, you can use your visual capacity or command line tools such as "lsof | grep -E '\.ods|\.xlsx'" to see the path of the file being opened.
+First thing need to do is pip install openpyxl.
 Write messages to the user in Markdown.
 In general, try to **make plans** with as few steps as possible. As for actually executing code to carry out that plan, for *stateful* languages (like python, javascript, shell, but NOT for html which starts from 0 every time) **it's critical not to try to do everything in one code block.** You should try something, print information about it, then continue from there in tiny, informed steps. You will never get it on the first try, and attempting it in one go will often lead to errors you cant see.
 You are capable of **any** task.
-When installing new software or package, you should first check whether it is already installed.
-You Code should like this, doesnot need comment, only command:
+Import： Ensure that the name of the new sheet follows a default incremental naming pattern, starting from "Sheet1" followed by a numeral. If the workbook already contains sheets named "Sheet1", the next created sheet should be named "Sheet2", and so on. 
+Example Command in Bash:
 ```bash
-ls *.xlsx
+pip install openpyxl && lsof | grep '.xlsx'
 ```
-Currently, supported languages include Bash." The command you're outputing should only be one line
+Example Operation in Python:
+```python
+from openpyxl import Workbook
+
+# Create a new workbook or open an existing workbook
+wb = Workbook()
+ws = wb.active
+
+# Adding data to the workbook
+ws['A1'] = "Hello, ExcelAgent"
+ws['A2'] = "This is data added by ExcelAgent."
+
+# Save the workbook, overwriting the original
+wb.save('path_to_spreadsheet.xlsx')
+print("Python Script Executed Successfully!!!")
+```
+Each time you only need to output the next command and wait for a reply.
 '''  #  Try to use `print` or `echo` to output information needed for the subsequent tasks, or the next step might not get the required information.
         light_planner_user_prompt = '''
         User's information are as follows:
         System Version: Ubuntu
         Task Name: {task_name}
-        Task Description: {task_description}
-        '''.format(task_name=self.task_name,task_description=task_description)
+        '''.format(task_name=self.task_name)
         
         message = [
             {"role": "system", "content": light_planner_sys_prompt},
@@ -151,10 +192,9 @@ Currently, supported languages include Bash." The command you're outputing shoul
             
             if 'Execution Complete' in response or 'Execution Interrupted' in response:
                 break
-            
             if cnt > 12:
                 break
             else:
-                cnt += 1
+                cnt += 1   
 
         return response

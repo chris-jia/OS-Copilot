@@ -7,6 +7,7 @@ import base64
 import time
 from rich.console import Console
 from rich.markdown import Markdown
+import contextlib
 
 from desktop_env.envs.desktop_env import DesktopEnv
 
@@ -144,57 +145,72 @@ if __name__ == '__main__':
         )
 
 
-    example_path = 'D:\jcy\OSWorld\evaluation_examples'
+    test_all_meta_path = "D:\\jcy\\OSWorld\\evaluation_examples/test_all.json"
+    example_path = "D:\\jcy\\OSWorld\\evaluation_examples"
+
+    with open(test_all_meta_path, "r", encoding="utf-8") as f:
+        test_all_meta = json.load(f)
 
     domain = 'libreoffice_calc'
-    example_id = '12382c62-0cd1-4bf2-bdc8-1d20bf9b2371'
-    config_file = os.path.join(example_path, f"examples/{domain}/{example_id}.json")
-    with open(config_file, "r", encoding="utf-8") as f:
-        example = json.load(f)
-    task_name = example['instruction']
-    print('task_name:',task_name)
-    example = replace_path(example, 'evaluation_examples/settings', 'D:\jcy\OSWorld\evaluation_examples\settings')
-    
-    previous_obs = environment.reset(task_config=example)
+    tasks = test_all_meta[domain]
 
-    args = setup_config()
-
-    
-
-    plan_agent = PlanAgent(args,task_name,agent_info_list)
-
-    info = plan_agent.run(previous_obs)
-
-    if 'CLIAgent' in info:
-        cli_agent = CLIAgent(args,task_name,environment)
-        cli_agent.run(info)
-
-    elif 'GUIAgent' in info:
-        action_space = 'pyautogui'
-        observation_type = 'screenshot_a11y_tree'
-        max_trajectory_length = 3
-        gui_agent = GUIAgent(args, example, environment, action_space, observation_type,max_trajectory_length)
-        gui_agent.run()
-
-    elif 'WordAgent' in info:
-        word_agent = WordAgent(args,task_name,environment)
-        word_agent.run()
-
-    elif 'PptxAgent' in info:
-        pptx_agent = PptxAgent(args,task_name,environment)
-        pptx_agent.run()
-    
-    elif 'ExcelAgent' in info:
-        excel_agent = ExcelAgent(args,task_name,environment)
-        excel_agent.run()
-    else:
-        # replan 
-        # to be update
-        pass
-    
-    # # 判定内容
-    print("evaluate.......")
-    print(environment.evaluate())
+    for example_id in tasks[6:]:
+        try:
+            config_file = os.path.join(example_path, f"examples/{domain}/{example_id}.json")
+            with open(config_file, "r", encoding="utf-8") as f:
+                example = json.load(f)
+            task_name = example['instruction']
+            
+            log_file_path = os.path.join("cache",example_id, f"{example_id}.log")
+            os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+            
+            with open(log_file_path, 'w', encoding="utf-8") as log_file:
+                with contextlib.redirect_stdout(log_file):
+                    print('task_name:', task_name)
+                    example = replace_path(example, 'evaluation_examples/settings', 'D:\\jcy\\OSWorld\\evaluation_examples\\settings')
+                    
+                    previous_obs = environment.reset(task_config=example)
+                    args = setup_config()
+                    
+                    plan_agent = PlanAgent(args, task_name, agent_info_list)
+                    info = plan_agent.run(previous_obs)
+                    
+                    if 'CLIAgent' in info:
+                        cli_agent = CLIAgent(args, task_name, environment)
+                        cli_agent.run(info)
+                    
+                    elif 'GUIAgent' in info:
+                        action_space = 'pyautogui'
+                        observation_type = 'screenshot_a11y_tree'
+                        max_trajectory_length = 3
+                        gui_agent = GUIAgent(args, example, environment, action_space, observation_type, max_trajectory_length)
+                        gui_agent.run()
+                    
+                    elif 'WordAgent' in info:
+                        word_agent = WordAgent(args, task_name, environment)
+                        word_agent.run()
+                    
+                    elif 'PptxAgent' in info:
+                        pptx_agent = PptxAgent(args, task_name, environment)
+                        pptx_agent.run()
+                    
+                    elif 'ExcelAgent' in info:
+                        excel_agent = ExcelAgent(args, task_name, environment)
+                        excel_agent.run()
+                    else:
+                        # replan 
+                        # to be update
+                        pass
+                    
+                    # 判定内容
+                    print("evaluate.......")
+                    print(environment.evaluate())
+        except Exception as e:
+            error_log_path = os.path.join("cache",example_id, f"{example_id}_error.log")
+            os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+            with open(error_log_path, 'w', encoding="utf-8") as error_log:
+                error_log.write(str(e))
+            print(e)
 
 
 

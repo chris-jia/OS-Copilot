@@ -205,5 +205,6 @@ test.py
 cache/
 tmp/
 results/
+*.out
 
 

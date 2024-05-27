@@ -34,26 +34,38 @@ def extract_code(input_string):
         # 如果没有语言信息，尝试从代码内容中检测
         if not language:
             if re.search("python", code.lower()) or re.search(r"import\s+\w+", code):
-                language = "Python"
+                language = "python"
             elif re.search("bash", code.lower()) or re.search(r"echo", code):
-                language = "Bash"
-        code = code.strip()
-        code = code.replace('"', '\\"')
-        code = code.replace('\n', ' && ')
-        code = "pyautogui.typewrite(\"{0}\", interval=0.05)\npyautogui.press('enter')\ntime.sleep(2)".format(code)
-        if re.search("sudo", code.lower()):
-            code += "\npyautogui.typewrite('password', interval=0.05)\npyautogui.press('enter')\ntime.sleep(1)"
+                language = "bash"
+
+        if language == 'bash':
+            code = code.strip()
+            code = code.replace('"', '\\"')
+            code = code.replace('\n', ' && ')
+            code = "pyautogui.typewrite(\"{0}\", interval=0.05)\npyautogui.press('enter')\ntime.sleep(2)".format(code)
+            if re.search("sudo", code.lower()):
+                code += "\npyautogui.typewrite('password', interval=0.05)\npyautogui.press('enter')\ntime.sleep(1)"
+        elif language == 'python':
+
+            # save code
+            with open('tmp.py', 'w') as f:
+                f.write(code)
+
+            code = "pyautogui.typewrite(\"python main.py\", interval=0.05)\npyautogui.press('enter')\ntime.sleep(2)"
+            
+        else:
+            raise language
 
         return code, language
     else:
         return None, None
 
 from desktop_env.envs.desktop_env import DesktopEnv
-class CLIAgent(BaseModule):
+class WordAgent(BaseModule):
     info = {
-            "name": "CLIAgent",
-            "can do": "excels at completing tasks using Linux command-line commands and can handle any goal that involves script execution, file manipulation, package installation, and internet access.",
-            "can't do": "cann't handle GUI operation, cann't writing python script",
+            "name": "WordAgent",
+            "can do": "excels at identifying and manipulating Word documents using Python's python-docx library, can manage tasks involving document modification, data insertion, and formatting adjustments. Capable of detecting open Word or other documents using Bash commands.",
+            "can't do": "cannot handle GUI operations, cannot perform tasks outside the capabilities of the python-docx library such as directly interacting with embedded media and scripts within the documents. Additionally, cannot modify LibreOffice Writer software defaults or preferences.",
     }
     def __init__(self, args, task_name, env):
         super().__init__()
@@ -66,8 +78,13 @@ class CLIAgent(BaseModule):
         self.reply = None
     
     def execute_tool(self, code, lang):
+        if lang == 'python':
+            file = [{
+                "local_path": 'tmp.py',
+                "path": '/home/user/main.py'
+              }]
+            self.environment.setup_controller._upload_file_setup(file)
         obs, reward, done, info = self.environment.step(code)  # node_type
-
         
         reply = self.environment.controller.get_terminal_output()
         # update reply
@@ -79,63 +96,83 @@ class CLIAgent(BaseModule):
 
         base64_image = encode_image(obs['screenshot'])
         print("message_terminal", message_terminal)
-        message = {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "After executing the command, the terminal output is {0}. the screenshot as below.".format(message_terminal)
-                    }
-                    # {
-                    #     "type": "image_url",
-                    #     "image_url": {
-                    #         "url": f"data:image/png;base64,{base64_image}",
-                    #         "detail": "high"
-                    #     }
-                    # }
-                ]
-        }
+        if 'gpt' in self.llm.model_name:
+            message = {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "After executing the command, the terminal output is {0}. the screenshot as below.".format(message_terminal)
+                        }
+                        # {
+                        #     "type": "image_url",
+                        #     "image_url": {
+                        #         "url": f"data:image/png;base64,{base64_image}",
+                        #         "detail": "high"
+                        #     }
+                        # }
+                    ]
+            }
+        else:
+            message = {
+                    "role": "user",
+                    "content": "After executing the command, the terminal output is {0}. the screenshot as below.".format(message_terminal)
+            }
         return message
 # When a user refers to a file opened， you can use the provided screenshot to find the filepath.
-    def run(self,task_description):
+    def run(self):
 
         while not self.environment.controller.get_terminal_output():
             self.environment.step("pyautogui.click()")
             self.environment.step("pyautogui.hotkey('ctrl', 'alt', 't')")
 
-        light_planner_sys_prompt = '''You are Light Friday, a world-class programmer that can complete any goal by using linux command.
+        light_planner_sys_prompt = '''You are DocAgent, an advanced programming assistant specializing in managing and manipulating Word documents. 
+        Your capabilities include identifying open Word documents using Bash commands and utilizing Python's python-docx library to perform document manipulations.
 First, write a plan. **Always recap the plan between each code block** (you have extreme short-term memory loss, so you need to recap the plan between each message block to retain it).
 When you execute code, it will be executed **on the user's machine**. The user has given you **full and complete permission** to execute any code necessary to complete the task. Execute the code.
 If you want to send data between programming languages, save the data to a txt or json.
 You can access the internet. Run **any code** to achieve the goal, and if at first you don't succeed, try again and again.
 You can install new packages.
-Important: When a user refers to a file opened or a url, you can use your visual capacity or some command line tools to see the path of the file being opened.
+Important: When a user refers to a file opened or a url, you can use your visual capacity or some command line tools such as "lsof | grep -E '\.odt|\.docx'" to see the path of the file being opened.
+First thing need to do is pip install python-docx.
 Write messages to the user in Markdown.
 In general, try to **make plans** with as few steps as possible. As for actually executing code to carry out that plan, for *stateful* languages (like python, javascript, shell, but NOT for html which starts from 0 every time) **it's critical not to try to do everything in one code block.** You should try something, print information about it, then continue from there in tiny, informed steps. You will never get it on the first try, and attempting it in one go will often lead to errors you cant see.
 You are capable of **any** task.
-When installing new software or package, you should first check whether it is already installed.
-You Code should like this, doesnot need comment, only command:
+Example Command in Bash:
 ```bash
-ls *.xlsx
+pip install python-docx && lsof | grep '.docx'
 ```
-Currently, supported languages include Bash." The command you're outputing should only be one line
+Example Operation in Python:
+```python
+from docx import Document
+
+# Opening the document
+doc = Document('path_to_document.docx')
+
+# Perform modifications here
+doc.add_paragraph('New text added by DocAgent.')
+
+# Save the document, overwriting the original
+doc.save('path_to_document.docx')
+print("Python Script Executed Successfully!!!")
+```
+Each time you only need to output the next command and wait for a reply.
 '''  #  Try to use `print` or `echo` to output information needed for the subsequent tasks, or the next step might not get the required information.
         light_planner_user_prompt = '''
         User's information are as follows:
         System Version: Ubuntu
         Task Name: {task_name}
-        Task Description: {task_description}
-        '''.format(task_name=self.task_name,task_description=task_description)
+        '''.format(task_name=self.task_name)
         
         message = [
             {"role": "system", "content": light_planner_sys_prompt},
             {"role": "user", "content": light_planner_user_prompt},
         ]
-        cnt = 0
+ 
         while True:
             print("send_chat_prompts...")
             response = send_chat_prompts(message, self.llm)
-            print(response)
+            rich_print(response)
             message.append({"role": "assistant", "content": response})
 
             code, lang = extract_code(response)
@@ -151,10 +188,5 @@ Currently, supported languages include Bash." The command you're outputing shoul
             
             if 'Execution Complete' in response or 'Execution Interrupted' in response:
                 break
-            
-            if cnt > 12:
-                break
-            else:
-                cnt += 1
 
         return response

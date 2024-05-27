@@ -23,6 +23,11 @@ class GUIAgent(BaseAgent):
     
     This agent is designed to process tasks, manage errors, and refine strategies as necessary to ensure successful task completion. It supports dynamic task planning, information retrieval, execution strategy application, and employs a mechanism for self-refinement in case of execution failures.
     """
+    info = {
+            "name": "GUIAgent",
+            "can do": "specializes in tasks that require GUI operations, particularly adept at modifying software settings and preferences through graphical user interfaces.",
+            "can't do": "cannot efficiently handle tasks that are more effectively executed via command-line interfaces, such as script execution, batch file manipulations, and server and system management."
+        }
 
     def __init__(self, args, config, env, action_space,observation_type,max_trajectory_length):
         """
@@ -38,6 +43,8 @@ class GUIAgent(BaseAgent):
         Raises:
             ValueError: If the OS version check fails.
         """
+
+        
         super().__init__()
         try:
             check_os_version(self.system_version)
