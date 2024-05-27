@@ -67,12 +67,29 @@ OS-Copilot is an open-source library to build generalist agents capable of autom
    ```
    python quick_start.py
    ```
-  **run for OSworld task**
+## ⚡️ Run for OSworld task
+We recommend that you refer OSworld to configure the osworld environment.
 
-   ```
-   python oscopilot\agents\plan_agent.py  # single
-   python oscopilot\agents\plan_agent_all.py  # for domain or all tasks
-   ```
+Prepare the environment:
+```bash
+# Clone the OSWorld repository
+git clone https://github.com/xlang-ai/OSWorld
+
+# Change directory into the cloned repository
+cd OSWorld
+
+# Optional: Create a Conda environment for OSWorld
+# conda create -n osworld python=3.9
+# conda activate osworld
+
+# Install required dependencies
+pip install -e .
+```
+Run script:
+```
+python oscopilot\agents\plan_agent.py  # single
+python oscopilot\agents\plan_agent_all.py  # for domain or all tasks
+```
 
 \* **FRIDAY currently only supports single-round conversation**.
 
