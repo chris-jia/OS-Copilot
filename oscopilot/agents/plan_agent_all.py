@@ -154,7 +154,7 @@ if __name__ == '__main__':
     domain = 'libreoffice_calc'
     tasks = test_all_meta[domain]
 
-    for example_id in tasks[6:]:
+    for example_id in tasks[7:]:
         try:
             config_file = os.path.join(example_path, f"examples/{domain}/{example_id}.json")
             with open(config_file, "r", encoding="utf-8") as f:

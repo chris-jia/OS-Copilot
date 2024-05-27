@@ -67,6 +67,12 @@ OS-Copilot is an open-source library to build generalist agents capable of autom
    ```
    python quick_start.py
    ```
+  **run for OSworld task**
+
+   ```
+   python oscopilot\agents\plan_agent.py  # single
+   python oscopilot\agents\plan_agent_all.py  # for domain or all tasks
+   ```
 
 \* **FRIDAY currently only supports single-round conversation**.
 
